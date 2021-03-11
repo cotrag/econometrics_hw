@@ -1,0 +1,442 @@
+---
+title: "Econometrics Lab 3"
+output: 
+  html_document:
+    theme: paper
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+library(haven)
+library(foreign)
+library(tidyverse)
+library(magrittr)
+library(usmap)
+library(stargazer)
+library(lmtest)
+library(sandwich)
+
+
+knitr::opts_chunk$set(echo = TRUE)
+
+cps_79_19 <- read_dta("cepr_79_19.dta")
+
+
+rand_data <- read_dta("rand_initial_sample_2.dta")
+
+cps_79_19 <- cps_79_19 %>%
+  mutate(degree=factor(educ, levels = c(1, 2, 3, 4, 5), labels = c("Less Than HS", "HS", "Some College", "College", "Advanced Degree")))
+cps_79_19$race<- factor(cps_79_19$wbho, levels = c("1", "2", "3", "4"), labels = c("White", "black", "hispanic", "other"))
+
+ 
+```
+
+
+
+## Question 1
+
+```{r}
+
+
+
+g1 <- rand_data %>% 
+  filter(rand_plan_group == 1)
+
+
+g2 <- rand_data %>% 
+  filter(rand_plan_group == 2)
+
+
+g3 <- rand_data %>% 
+  filter(rand_plan_group == 3)
+
+
+g4 <- rand_data %>% 
+  filter(rand_plan_group == 4)
+
+
+g5 <- rand_data %>% 
+  filter(rand_plan_group == 5)
+
+
+g6 <- rand_data %>% 
+  filter(rand_plan_group == 6)
+
+
+
+
+
+t.test(g1$income1, g2$income1)
+
+t.test(g1$income1, g3$income1)
+
+t.test(g1$income1, g4$income1)
+
+t.test(g1$income1, g5$income1)
+
+t.test(g1$income1, g6$income1)
+
+t.test(g2$income1, g3$income1)
+
+t.test(g2$income1, g4$income1)
+
+t.test(g2$income1, g5$income1)
+
+t.test(g2$income1, g6$income1)
+
+t.test(g3$income1, g4$income1)
+
+t.test(g3$income1, g5$income1)
+
+t.test(g3$income1, g6$income1)
+
+t.test(g4$income1, g5$income1)
+
+t.test(g4$income1, g6$income1)
+
+t.test(g5$income1, g6$income1)
+
+
+
+
+t.test(g1$age, g2$age)
+
+t.test(g1$age, g3$age)
+
+t.test(g1$age, g4$age)
+
+t.test(g1$age, g5$age)
+
+t.test(g1$age, g6$age)
+
+t.test(g2$age, g3$age)
+
+t.test(g2$age, g4$age)
+
+t.test(g2$age, g5$age)
+
+t.test(g2$age, g6$age)
+
+t.test(g3$age, g4$age)
+
+t.test(g3$age, g5$age)
+
+t.test(g3$age, g6$age)
+
+t.test(g4$age, g5$age)
+
+t.test(g4$age, g6$age)
+
+t.test(g5$age, g6$age)
+
+
+
+
+t.test(g1$educper, g2$educper)
+
+t.test(g1$educper, g3$educper)
+
+t.test(g1$educper, g4$educper)
+
+t.test(g1$educper, g5$educper)
+
+t.test(g1$educper, g6$educper)
+
+t.test(g2$educper, g3$educper)
+
+t.test(g2$educper, g4$educper)
+
+t.test(g2$educper, g5$educper)
+
+t.test(g2$educper, g6$educper)
+
+t.test(g3$educper, g4$educper)
+
+t.test(g3$educper, g5$educper)
+
+t.test(g3$educper, g6$educper)
+
+t.test(g4$educper, g5$educper)
+
+t.test(g4$educper, g6$educper)
+
+t.test(g5$educper, g6$educper)
+
+
+
+
+t.test(g1$blackhisp, g2$blackhisp)
+
+t.test(g1$blackhisp, g3$blackhisp)
+
+t.test(g1$blackhisp, g4$blackhisp)
+
+t.test(g1$blackhisp, g5$blackhisp)
+
+t.test(g1$blackhisp, g6$blackhisp)
+
+t.test(g2$blackhisp, g3$blackhisp)
+
+t.test(g2$blackhisp, g4$blackhisp)
+
+t.test(g2$blackhisp, g5$blackhisp)
+
+t.test(g2$blackhisp, g6$blackhisp)
+
+t.test(g3$blackhisp, g4$blackhisp)
+
+t.test(g3$blackhisp, g5$blackhisp)
+
+t.test(g3$blackhisp, g6$blackhisp)
+
+t.test(g4$blackhisp, g5$blackhisp)
+
+t.test(g4$blackhisp, g6$blackhisp)
+
+t.test(g5$blackhisp, g6$blackhisp)
+
+
+
+
+
+```
+
+## Question 2
+
+```{r}
+
+
+
+t.test(g1$good_health, g2$good_health)
+
+t.test(g1$good_health, g3$good_health)
+
+t.test(g1$good_health, g4$good_health)
+
+t.test(g1$good_health, g5$good_health)
+
+t.test(g1$good_health, g6$good_health)
+
+t.test(g2$good_health, g3$good_health)
+
+t.test(g2$good_health, g4$good_health)
+
+t.test(g2$good_health, g5$good_health)
+
+t.test(g2$good_health, g6$good_health)
+
+t.test(g3$good_health, g4$good_health)
+
+t.test(g3$good_health, g5$good_health)
+
+t.test(g3$good_health, g6$good_health)
+
+t.test(g4$good_health, g5$good_health)
+
+t.test(g4$good_health, g6$good_health)
+
+t.test(g5$good_health, g6$good_health)
+
+
+
+
+t.test(g1$bad_health, g2$bad_health)
+
+t.test(g1$bad_health, g3$bad_health)
+
+t.test(g1$bad_health, g4$bad_health)
+
+t.test(g1$bad_health, g5$bad_health)
+
+t.test(g1$bad_health, g6$bad_health)
+
+t.test(g2$bad_health, g3$bad_health)
+
+t.test(g2$bad_health, g4$bad_health)
+
+t.test(g2$bad_health, g5$bad_health)
+
+t.test(g2$bad_health, g6$bad_health)
+
+t.test(g3$bad_health, g4$bad_health)
+
+t.test(g3$bad_health, g5$bad_health)
+
+t.test(g3$bad_health, g6$bad_health)
+
+t.test(g4$bad_health, g5$bad_health)
+
+t.test(g4$bad_health, g6$bad_health)
+
+t.test(g5$bad_health, g6$bad_health)
+
+
+t.test(g1$cholest, g2$cholest)
+
+t.test(g1$cholest, g3$cholest)
+
+t.test(g1$cholest, g4$cholest)
+
+t.test(g1$cholest, g5$cholest)
+
+t.test(g1$cholest, g6$cholest)
+
+t.test(g2$cholest, g3$cholest)
+
+t.test(g2$cholest, g4$cholest)
+
+t.test(g2$cholest, g5$cholest)
+
+t.test(g2$cholest, g6$cholest)
+
+t.test(g3$cholest, g4$cholest)
+
+t.test(g3$cholest, g5$cholest)
+
+t.test(g3$cholest, g6$cholest)
+
+t.test(g4$cholest, g5$cholest)
+
+t.test(g4$cholest, g6$cholest)
+
+t.test(g5$cholest, g6$cholest)
+
+
+
+
+
+
+t.test(g1$has_pain, g2$has_pain)
+
+t.test(g1$has_pain, g3$has_pain)
+
+t.test(g1$has_pain, g4$has_pain)
+
+t.test(g1$has_pain, g5$has_pain)
+
+t.test(g1$has_pain, g6$has_pain)
+
+t.test(g2$has_pain, g3$has_pain)
+
+t.test(g2$has_pain, g4$has_pain)
+
+t.test(g2$has_pain, g5$has_pain)
+
+t.test(g2$has_pain, g6$has_pain)
+
+t.test(g3$has_pain, g4$has_pain)
+
+t.test(g3$has_pain, g5$has_pain)
+
+t.test(g3$has_pain, g6$has_pain)
+
+t.test(g4$has_pain, g5$has_pain)
+
+t.test(g4$has_pain, g6$has_pain)
+
+t.test(g5$has_pain, g6$has_pain)
+
+
+
+
+
+t.test(g1$has_worry, g2$has_worry)
+
+t.test(g1$has_worry, g3$has_worry)
+
+t.test(g1$has_worry, g4$has_worry)
+
+t.test(g1$has_worry, g5$has_worry)
+
+t.test(g1$has_worry, g6$has_worry)
+
+t.test(g2$has_worry, g3$has_worry)
+
+t.test(g2$has_worry, g4$has_worry)
+
+t.test(g2$has_worry, g5$has_worry)
+
+t.test(g2$has_worry, g6$has_worry)
+
+t.test(g3$has_worry, g4$has_worry)
+
+t.test(g3$has_worry, g5$has_worry)
+
+t.test(g3$has_worry, g6$has_worry)
+
+t.test(g4$has_worry, g5$has_worry)
+
+t.test(g4$has_worry, g6$has_worry)
+
+t.test(g5$has_worry, g6$has_worry)
+
+
+
+
+
+```
+
+## Question 3
+
+```{r, results='asis'}
+ 
+ reg_function <- function(year_fuction){
+   temp_data <- cps_79_19 %>% 
+     filter(year == year_fuction)
+   regress_results <- lm(log(wage4+1)~degree+age+I(age^2)+female+race, 
+        data=temp_data, na.action = na.omit)
+   
+   return(regress_results)
+ }
+ 
+reg1 <- reg_function(1979)
+ 
+reg2 <- reg_function(1989)
+
+reg3 <- reg_function(1999)
+
+reg4 <- reg_function(2009)
+
+reg5 <- reg_function(2019)
+
+cov1         <- vcovHC(reg1, type = "HC1")
+robust_se1   <- sqrt(diag(cov1))
+
+cov2         <- vcovHC(reg2, type = "HC1")
+robust_se2    <- sqrt(diag(cov2))
+
+cov3         <- vcovHC(reg3, type = "HC1")
+robust_se3   <- sqrt(diag(cov3))
+
+cov4         <- vcovHC(reg4, type = "HC1")
+robust_se4    <- sqrt(diag(cov4))
+
+cov5         <- vcovHC(reg5, type = "HC1")
+robust_se5    <- sqrt(diag(cov5))
+
+stargazer(reg1, reg2, reg3, reg4, reg5, type = "html", 
+          dep.var.labels = "Wage (log)",
+          covariate.labels = c("Degree: High School", "Degree: Some College",
+                               "Degree: College", "Degree: Advanced Degree",
+                               "Age", "Age Squared", "Female", "Race: Black", 
+                               "Race:Hispanic", "Race:Other", "Constant"),
+          title = "Models for log(Wage) over selected years 
+          with Robust Standard Errors",
+          column.labels = c("1979", "1989", "1999", "2009", "2019"),
+          se = list(robust_se1, robust_se2, robust_se3, robust_se4 ,robust_se5))
+
+
+
+```
+
+
+## Question 4
+
+It is interesting to see how the specified variables are very often statistically significant, and some have changed consistently over time. One striking note is how much returns to higher education have increased over time. The coefficient on an advanced degree increased for each decade, starting at `r round(reg1$coefficients[5], 3)` in 1979 and ending at `r round(reg5$coefficients[5], 3)` in 2019, meaning that having an advanced degree resulted in a 41.6% increase in wages on average compared to someone with no degree in 1979, all else equal, and the same situation was a 79.9% increase in 2009. A similar, but less drastic, result is seen in the return of a college degree. The wage penalty associated with being female decreased in the timeframe, from a coefficient of `r round(reg1$coefficients[8], 3)` to `r round(reg5$coefficients[8], 3)`. One other interesting note is that there is not much evidence for a change in the racial wage gap, at least when controlling for all of the other variables. In fact, it the wage penalty for being black actually slightly increased between 1979 and 2019. 
+
+
+
+
+

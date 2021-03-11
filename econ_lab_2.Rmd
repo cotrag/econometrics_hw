@@ -1,0 +1,445 @@
+---
+title: "Econometrics Lab 2"
+output: 
+  html_document:
+    theme: paper
+  
+---
+
+```{r setup, include=FALSE}
+library(haven)
+library(foreign)
+library(tidyverse)
+library(magrittr)
+library(usmap)
+
+
+ knitr::opts_chunk$set(echo = TRUE)
+
+cps_79_19 <- read_dta("cepr_79_19.dta")
+
+
+```
+
+
+## Dataset cleaning
+```{r}
+
+cps_79_19 <- cps_79_19 %>%
+  mutate(degree=factor(educ, levels = c(1, 2, 3, 4, 5), labels = c("Less Than HS", "HS", "Some College", "College", "Advanced Degree")))
+cps_79_19$race<- factor(cps_79_19$wbho, levels = c("1", "2", "3", "4"), labels = c("White", "black", "hispanic", "other"))
+
+
+```
+
+
+## Question 1
+
+```{r}
+
+
+# need to figure out how to run the regression over each year individually and get coefficient for b3 (female). The regression below is for the entire dataset.
+
+yearvector <- sort(unique(cps_79_19$year))
+gap <- c()
+for (y in yearvector) {
+  temp <- cps_79_19 %>%
+    filter(year == y)
+reg_func <- lm(log(wage4+1)~degree+age+I(age^2)+female+race, data=temp, na.action = na.omit)
+gap<- c(gap,reg_func$coefficients["female"])
+rm(temp)
+}
+gap<- data.frame(yearvector, gap)
+gap
+
+```
+
+
+```{r}
+
+ggplot(gap, aes(x = yearvector, y = gap)) +
+  geom_line() +
+  labs(y = "Gender Gap", title = "Gender Gap Over Time", x = "Year")+
+  theme_minimal()
+
+
+
+```
+
+
+
+## Question 2
+
+```{r}
+
+yearvector <- sort(unique(cps_79_19$year))
+gap_race <- c()
+for (y in yearvector) {
+  temp_race <- cps_79_19 %>% 
+    filter(year == y)
+reg_func_race <- lm(log(wage4+1)~degree+age+I(age^2)+female+race, data=temp_race, na.action = na.omit)
+gap_race <- c(gap_race,reg_func_race$coefficients["raceblack"])
+rm(temp_race)
+}
+gap_race<- data.frame(yearvector, gap_race)
+gap_race
+
+
+```
+
+
+```{r}
+
+
+ggplot(gap_race, aes(x = yearvector, y = gap_race)) +
+  geom_line() +
+  labs(y = "Racial Gap", title = "Racial Gap Over Time", x = "Year")+
+  theme_minimal()
+
+
+```
+
+
+## Question 3
+
+```{r}
+
+yearvector <- sort(unique(cps_79_19$year))
+gap_edu <- c()
+
+for(y in yearvector){
+  temp_edu <- cps_79_19 %>% 
+    filter(year == y)
+reg_func_edu <- lm(log(wage4+1)~degree+age+I(age^2)+female+race, data=temp_edu, na.action = na.omit)
+gap_edu <- c(gap_edu, reg_func_edu$coefficients["degreeCollege"] - reg_func_edu$coefficients["degreeHS"])
+rm(temp_edu)
+}
+
+gap_edu <- data.frame(yearvector, gap_edu)
+gap_edu
+
+
+
+```
+
+
+```{r}
+
+ggplot(gap_edu, aes(x = yearvector, y = gap_edu)) +
+  geom_line() +
+  labs(y = "Education Gap", title = "Education Gap Over Time", x = "Year")+
+  theme_minimal()
+
+
+```
+
+
+
+## Prep for q4
+
+```{r}
+cps_79_19 <- cps_79_19 %>%
+  mutate(employed= case_when(lfstat==1 ~ 1,
+                             lfstat==2 | lfstat==3 ~ 0),
+         unemployed = case_when(lfstat==2 ~ 1,
+                                lfstat==1 | lfstat==3 ~ 0),
+         nilf =case_when(lfstat==3 ~1,
+                         lfstat==1|lfstat==2 ~ 0))
+
+
+```
+
+
+
+## Question 4
+
+```{r}
+
+labor_report <- function(s, year_func){
+  employment_rate <- cps_79_19 %>%
+    filter(state == s) %>%
+    filter(year == year_func) %>% 
+    summarise(er = sum(employed[employed == 1], na.rm = TRUE)/
+                (sum(employed[employed == 1], na.rm = TRUE) + sum(unemployed[unemployed == 1], na.rm = TRUE) + 
+                   sum(nilf[nilf == 1], na.rm = TRUE)))
+  
+    unemployment_rate <- cps_79_19 %>%
+    filter(state == s) %>%
+    filter(year == year_func) %>% 
+    summarise(unempr = sum(unemployed[unemployed == 1], na.rm = TRUE)/
+                (sum(employed[employed == 1], na.rm = TRUE) + sum(unemployed[unemployed == 1], na.rm = TRUE) + 
+                   sum(nilf[nilf == 1], na.rm = TRUE)))
+    
+    nilf_rate <- cps_79_19 %>%
+    filter(state == s) %>%
+    filter(year == year_func) %>% 
+    summarise(nilfr = sum(nilf[nilf == 1], na.rm = TRUE)/
+                (sum(employed[employed == 1], na.rm = TRUE) + sum(unemployed[unemployed == 1], na.rm = TRUE) + 
+                   sum(nilf[nilf == 1], na.rm = TRUE)))
+  
+  mean_wage <- cps_79_19 %>%
+    filter(state == s) %>%
+    filter(year == year_func) %>% 
+   summarise(mean_wage = mean(wage4, na.rm = TRUE))
+  
+  
+  
+  
+return(list(employment_rate, unemployment_rate, nilf_rate, mean_wage))
+}
+
+labor_report(21, 1993)
+
+
+
+```
+
+
+
+## Question 5
+
+```{r}
+
+
+# going to do it first separate, then see if I can combine
+
+cps_1979 <- cps_79_19 %>% 
+  filter(year == 1979)
+
+cps_1979 %>% 
+  ggplot(aes(x = wage4, fill = female)) +
+  geom_density() +
+  labs(x = "Wage ($)")+
+  theme_minimal()
+
+
+
+```
+
+## Question 6
+
+```{r}
+
+# going to do it first separate, then see if I can combine
+
+cps_2019 <- cps_79_19 %>% 
+  filter(year == 2019)
+
+
+cps_2019 %>% 
+  ggplot(aes(x = wage4, fill = female)) +
+  geom_density() +
+  labs(x = "Wage ($)")+
+  theme_minimal()
+
+```
+
+## Question 7
+
+```{r}
+
+# Create a map of the U.S. with state shaded by average wage in 1979.
+# the original dataset change did not correctly label states according to
+# current fips, need to do it over
+
+# cps_79_19_for_states <- read_dta("cepr_79_19.dta")
+
+# cps_79_19_for_states$state
+
+
+cps_1979_smw <- cps_1979 %>% 
+  group_by(state) %>% 
+  summarise(mean_wage = mean(wage4))
+
+cps_1979_smw$state <- as.character(cps_1979_smw$state)
+
+
+cps_1979_smw
+
+
+real_fips <- read_csv("state_fips_ds.csv")
+
+
+og_dataset_codes <- read_csv("og_dataset_labels.csv")
+
+og_dataset_codes <- og_dataset_codes %>% 
+  dplyr::select(c(value, state_name))
+
+og_dataset_codes
+
+real_fips
+
+
+join_lab_fips <- left_join(real_fips, og_dataset_codes, by = c("state" = "state_name"))
+
+join_lab_fips
+
+
+cps_1979_smw
+
+join_lab_fips$value <- as.character(join_lab_fips$value)
+
+cps_1979_smw_add_fips <- left_join(join_lab_fips, cps_1979_smw, by = c("value"= "state"))
+
+cps_1979_smw_add_fips
+
+data_conv_for_map <- cps_1979_smw_add_fips %>% 
+  dplyr::select(c(fips, mean_wage))
+
+data_conv_for_map$fips[data_conv_for_map$fips == 1] <- "01"
+data_conv_for_map$fips[data_conv_for_map$fips == 2] <- "02"
+data_conv_for_map$fips[data_conv_for_map$fips == 4] <- "04"
+data_conv_for_map$fips[data_conv_for_map$fips == 5] <- "05"
+data_conv_for_map$fips[data_conv_for_map$fips == 6] <- "06"
+data_conv_for_map$fips[data_conv_for_map$fips == 8] <- "08"
+data_conv_for_map$fips[data_conv_for_map$fips == 9] <- "09"
+
+data_conv_for_map
+
+
+
+plot_usmap(data = data_conv_for_map, values = "mean_wage") +
+  labs(title = "1979 Mean Wage") +
+  ggplot2::scale_fill_continuous(low = "white", high = "blue")
+
+
+
+```
+
+## Question 8
+
+```{r}
+
+
+
+cps_2019_smw <- cps_2019 %>% 
+  group_by(state) %>% 
+  summarise(mean_wage = mean(wage4, na.rm = TRUE))
+
+cps_2019_smw$state <- as.character(cps_2019_smw$state)
+
+
+cps_2019_smw
+
+
+real_fips <- read_csv("state_fips_ds.csv")
+
+
+og_dataset_codes <- read_csv("og_dataset_labels.csv")
+
+og_dataset_codes <- og_dataset_codes %>% 
+  dplyr::select(c(value, state_name))
+
+og_dataset_codes
+
+real_fips
+
+
+join_lab_fips <- left_join(real_fips, og_dataset_codes, by = c("state" = "state_name"))
+
+join_lab_fips
+
+
+cps_2019_smw
+
+join_lab_fips$value <- as.character(join_lab_fips$value)
+
+cps_2019_smw_add_fips <- left_join(join_lab_fips, cps_2019_smw, by = c("value"= "state"))
+
+cps_2019_smw_add_fips
+
+data_conv_for_map_2019 <- cps_2019_smw_add_fips %>% 
+  dplyr::select(c(fips, mean_wage))
+
+data_conv_for_map_2019$fips[data_conv_for_map_2019$fips == 1] <- "01"
+data_conv_for_map_2019$fips[data_conv_for_map_2019$fips == 2] <- "02"
+data_conv_for_map_2019$fips[data_conv_for_map_2019$fips == 4] <- "04"
+data_conv_for_map_2019$fips[data_conv_for_map_2019$fips == 5] <- "05"
+data_conv_for_map_2019$fips[data_conv_for_map_2019$fips == 6] <- "06"
+data_conv_for_map_2019$fips[data_conv_for_map_2019$fips == 8] <- "08"
+data_conv_for_map_2019$fips[data_conv_for_map_2019$fips == 9] <- "09"
+
+data_conv_for_map_2019
+
+
+
+plot_usmap(data = data_conv_for_map_2019, values = "mean_wage") +
+  labs(title = "2019 Mean Wage") +
+  ggplot2::scale_fill_continuous(low = "white", high = "blue")
+
+
+
+
+
+
+```
+
+## Question 9
+
+There are some clear differences in mean wages between 1979 and 2019. The maps show how different the geographic distribution of wages has changed. Probably the most striking change is how, in 1979, the mean wage was not very different between states. In 2019, however, there was was a very clear difference of mean wages between states. It is also important to note that the scale of the two maps is different, and the mean wage of each state is much higher in 2019 than 1979. The regressions also show striking changes in wage over time. The gender wage gap, explored in question 1, has decreased over time. The racial wage gap between white and black workers has slightly increased over time. The gap between workers with college degrees and only high school degrees has also increased over time.
+
+
+## Question 10
+
+I thought it would be interesting to add an interaction term between race and education level to the original regression. I did so, and then plotted the collegedegree:black coefficient over time. This can be seen as the mean wage of black people for a college degree vs. white people. There is a very small difference that is decreasing over time, but it seems like black college graduates have a slighly higher mean wage vs. white college graduates. 
+
+
+```{r}
+
+
+# build a function like I did earlier to track how returns to college degree
+# is same/different between white and black people
+
+
+#yearvector <- sort(unique(cps_79_19$year))
+#gap_edu <- c()
+
+#for(y in yearvector){
+#  temp_edu <- cps_79_19 %>% 
+#    filter(year == y)
+#reg_func_edu <- lm(log(wage4+1)~degree+age+I(age^2)+female+race, data=temp_edu, na.action = na.omit)
+#gap_edu <- c(gap_edu, reg_func_edu$coefficients["degreeCollege"] - reg_func_edu$coefficients["degreeHS"])
+#rm(temp_edu)
+# }
+
+#gap_edu <- data.frame(yearvector, gap_edu)
+# gap_edu
+
+
+
+yearvector <- sort(unique(cps_79_19$year))
+return_gap <- c()
+
+for(y in yearvector){
+  temp_return_gap <- cps_79_19 %>% 
+    filter(year == y)
+reg_func_return_gap <- lm(log(wage4+1)~degree+age+I(age^2)+female+race + race*degree, data=temp_return_gap, na.action = na.omit)
+return_gap <- c(return_gap, reg_func_return_gap$coefficients["degreeCollege:raceblack"])
+rm(temp_return_gap)
+}
+
+return_gap <- data.frame(yearvector, return_gap)
+return_gap
+
+
+
+
+```
+
+```{r}
+
+
+
+ggplot(return_gap, aes(x = yearvector, y = return_gap)) +
+  geom_line() +
+  labs(y = "Gap in Return", title = "Different Return to Education between White and Black People", x = "Year") +
+  theme_minimal()
+
+
+
+```
+
+
+
+
+
