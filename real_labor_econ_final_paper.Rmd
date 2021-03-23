@@ -1,0 +1,146 @@
+---
+title: "Labor Economics Final Paper"
+output: 
+  html_document:
+    theme: paper
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(usmap)
+library(magrittr)
+
+knitr::opts_chunk$set(fig.width=12, fig.height=8)
+
+pulse_24 <- read_csv("pulse2021_puf_24.csv")
+```
+
+# Week 24
+
+```{r}
+
+
+# filter dataset to only include people in between ages of 21 and 25
+
+young_24 <- pulse_24 %>%
+  filter(TBIRTH_YEAR %in% (1996:2000))
+
+
+
+
+
+
+# find % of people who did not do any work in past week
+
+
+pct_young_work_24 <-  young_24 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+
+pct_young_work_24$weight[3] / 
+    (pct_young_work_24$weight[1] + pct_young_work_24$weight[2] +  
+     pct_young_work_24$weight[3])
+
+
+# 38.8% of young people did not work in the past week
+# filter out non substantive variables
+
+
+young_24 <- young_24 %>% 
+  filter(ANYWORK != -99)
+
+
+pct_young_work_ms <- young_24 %>% 
+  filter(EST_ST == 28)
+
+
+
+
+pct_young_work_ms <-  pct_young_work_ms %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+```
+
+```{r}
+
+
+pct_young_not_working_function_24 <- function(state_function_yp){
+  st_filter <- young_24 %>% 
+    filter(EST_ST == state_function_yp)
+  
+  not_working <- st_filter %>% 
+    group_by(ANYWORK) %>% 
+    summarise(weight_work = sum(PWEIGHT))
+  
+  pct_calc_young <- not_working$weight_work[2]/
+  (not_working$weight_work[1] + not_working$weight_work[2])
+
+#  pcdf <- data.frame(state_function, pct_calc)
+  return(pct_calc_young)
+}
+
+# pct_young_not_working_function(38)
+
+
+
+```
+
+```{r}
+
+
+
+statevector_youngemp <- sort(unique(pulse_24$EST_ST))
+
+statevector_youngemp_df <- as.data.frame(statevector_youngemp)
+
+statevector_youngemp_df <- statevector_youngemp_df %>% 
+  mutate(row_id = row_number())
+
+
+
+young_employment_mapped <- map(statevector_youngemp, 
+                                pct_young_not_working_function_24)
+
+
+
+
+
+young_employment_binded <- do.call("rbind", young_employment_mapped)
+
+
+
+
+young_employment_binded_df <- as.data.frame(young_employment_binded)
+
+
+
+young_employment_binded_df <- young_employment_binded_df %>% 
+  mutate(row_id = row_number())
+
+
+
+
+final_young_employment <- left_join(young_employment_binded_df, 
+                                    statevector_youngemp_df,
+                                    by = c("row_id" = "row_id"))
+
+
+final_young_employment <- final_young_employment %>% 
+  mutate(pct_not_working = round(V1 *100, 2))
+
+final_young_employment
+
+```
+
+# Now need to do this w/ all other weeks
+
+Need to put data on dropbox because the datasets are so large-- use school's computers tomorrow.
+
+# After that, need to gather other state data
