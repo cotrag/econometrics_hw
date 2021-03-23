@@ -1,0 +1,174 @@
+---
+title: "Econometrics Lab 4"
+output: 
+    html_document:
+      theme: flatly
+      toc: true
+      toc_float: true
+      code_folding: hide
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+library(tidyverse)
+
+library(magrittr)
+
+library(modelsummary)
+
+library(stargazer)
+
+library(knitr)
+
+library(kableExtra)
+
+library(haven)
+
+library(foreign)
+
+library(doBy)
+
+library(plm)
+
+home_price<- read_dta("http://fmwww.bc.edu/ec-p/data/wooldridge/kielmc.dta")
+
+meps_data <- read_dta("mepsp20.dta")
+
+
+meps_csv <- read_csv("meps.csv")
+
+```
+
+## Question 1
+
+```{r}
+
+
+model_hp <- lm(price ~ nearinc + y81 + y81*nearinc, 
+               data = home_price)
+
+
+```
+
+```{r, results='asis'}
+
+stargazer(model_hp, type = "html", style = "aer",
+          dep.var.labels = "Price",
+          covariate.labels = c("Near Incinerator", "Year = 1981",
+                               "Near Incinerator * Year=1981"),
+          title = "Table 1",
+          digits = 2)
+
+```
+
+## Question 2
+
+```{r, results='asis'}
+
+dummy_model <- lm(price ~ y81 + nearinc, 
+               data = home_price)
+
+stargazer(dummy_model, type = "html", style = "aer",
+          title = "Table 2", dep.var.labels = "Price",
+          covariate.labels = c("Year = 1981", "Near Incinerator"),
+          digits = 2)
+
+mean_outcomes <- home_price %>% 
+  group_by(nearinc, y81) %>% 
+  summarise(mean_price = mean(price, na.rm = TRUE))
+
+mean_outcomes %>% 
+  knitr::kable(col.names = c("Near Incinerator", "Year = 1981",
+                             "Average Price"),
+               caption = "Table 3") %>% 
+  kable_styling("bordered")
+
+
+
+
+```
+
+The results of the regression do not match the means exactly as the question indicates they should. The regression implies that the price of a house near the incinerator in 1981 would be (85343 + 43151) - 27858 = \$100,636, while the means table indicates it would be \$91,946.25. Similarly, the price of a house not near the incinerator in 1981 shown be the regression is 85343 + 43151 = \$128,494, but the means table says \$131,902.38. I am curious if the standard errors are what are causing the difference in values. The constant term, which can be interpreted as the estimate of a house price in 1979 and not near the incinerator, is \$85,343.35, while the means table indicates the mean house price in the same situation is \$82,517.23.\
+
+## Question 3
+
+```{r,  results="asis"}
+
+meps_df <- as.data.frame(meps_data)
+
+stargazer(meps_df,
+          type = "html",
+          summary.stat=c("n", "mean", "sd")  ,
+          omit = c("dupersid", "round", "duid", "region"),
+          covariate.labels = c("All 5 Rounds", "Age", "Education", "Health", "Mental Health", "Insurance", "Prescription Ins.", "Total Expenditures", "ER Expenditures", "Prescription Exp.", "Income"),
+          title = "Table 4")
+
+
+
+```
+
+## Question 4
+
+```{r}
+
+health_fe <- plm(health ~  insurance + income + age + 
+                  as.factor(region), data = meps_csv, model = "within")
+
+mental_health_fe <- plm(mental_health ~  insurance + income + age + 
+                  as.factor(region), data = meps_csv, model = "within")
+
+er_expenditures_fe <- plm(er_expenditures ~  insurance + income + age + 
+                  as.factor(region), data = meps_csv, model = "within")
+
+t_health_expenditures_fe <- plm(t_health_expenditures ~  insurance + 
+                                income + age + as.factor(region), 
+                                data = meps_csv, model = "within")
+
+
+```
+
+```{r, results='asis'}
+
+stargazer(health_fe, mental_health_fe, er_expenditures_fe, 
+          t_health_expenditures_fe, type = "html", style = "aer",
+          dep.var.labels = c("Health", "Mental Health", 
+                            "ER Expenditures", 
+                            "Total Health Expenditures"),
+          notes = c("Census region fixed effects", 
+                    "included in each regression."),
+          omit = "region",
+          title = "Table 5")
+
+```
+
+## Question 5
+
+The effect of having insurance is generally insignificant in the above regressions. It is only significant when the outcome variable is total health expenditures, where having insurance significantly increases total health expenditures. If, when running pooled OLS, the insurance variable is significant, then it would mean than some unobserved factor is correlated with health and mental health and also mediated by regions.
+
+## Question 6
+
+```{r}
+# names(meps_data)
+#  insurance, income, region (as.factor), and age
+
+lin_model <- lm(all5rds ~ I(insurance*.01) + I(income*.0001) + age + 
+                  as.factor(region), data = meps_data)
+```
+
+```{r, results='asis'}
+
+stargazer(lin_model, type = "html", style = "aer",
+          dep.var.labels = "Participates in all 5 rounds",
+          notes = c("Census region fixed effects", 
+                    "included."),
+          covariate.labels = c("Insurance x 0.01", "Income x 0.0001",
+                               "Age", "Constant"),
+          omit = "region",
+          title = "Table 6")
+
+```
+
+This result shows evidence that attrition is significantly correlated with specified variables in the regression. This would bias the model, because it would mean that data tends to be collected more from older, wealthier people.

@@ -1,0 +1,138 @@
+---
+title: "Labor Econ Problem Set 3"
+output: 
+    html_document:
+      theme: flatly
+      toc: true
+      toc_float: true
+      code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(tidyverse)
+
+library(magrittr)
+
+library(modelsummary)
+
+library(stargazer)
+
+library(knitr)
+
+library(kableExtra)
+
+library(stargazer)
+
+cps_08 <- read_csv("cps08.csv")
+
+
+```
+
+## Question 1
+
+  *Part A*
+
+```{r }
+nrow(cps_08)
+
+```
+
+There are 7711 observations (rows) in the data set.
+
+## 
+
+  *Part B*
+
+```{r, results='asis'}
+cps_df <- as.data.frame(cps_08)
+
+
+cps_df <- cps_df %>% 
+  dplyr::select(!X1)
+
+stargazer(cps_df, type = "html", title = "Summary Statistics",
+          summary.stat = c("mean", "sd", "min", "max"),
+          covariate.labels = c("Average Hourly Earnings", "Year", "BA",
+                               "Female", "Age"),
+          digits = 2)
+
+
+```
+
+ \
+*Part C*
+
+```{r, results="asis"}
+
+model_1 <- lm(ahe ~ bachelor + female + age + I(age^2), data = cps_08)
+
+stargazer(model_1, type = "html", 
+          dep.var.labels = "Average Hourly Earnings",
+          style = "aer",
+          covariate.labels = c("Bachelors", "Female", "Age", 
+                               "Squared Age"),
+          digits = 2)
+
+```
+
+  *Part D*
+
+The coefficient on "bachelor" is the best measure of the return to a college degree.
+
+  *Part E*
+
+On average, a bachelor degree holder makes \$8.09/hour more than a non-bachelor degree holder, holding gender, age, and age-squared constant. This difference is significant at the 5% level.
+
+## Question 2
+
+  *Part A*
+
+```{r}
+
+cps_data_female <- cps_08 %>% 
+  dplyr::filter(female == 1)
+
+
+cps_data_male <- cps_08 %>% 
+  dplyr::filter(female == 0)
+
+
+
+female_model <- lm(ahe ~ bachelor + age + I(age^2), 
+                   data = cps_data_female)
+
+male_model <- lm(ahe ~ bachelor + age + I(age^2), 
+                 data = cps_data_male)
+
+```
+
+  *Part B*
+
+```{r, results="asis"}
+
+stargazer(female_model, male_model, type = "html",
+          dep.var.labels = "Average Hourly Eranings",
+          column.labels = c("Females", "Males"),
+          style = "aer",
+          covariate.labels = c("Bachelors", "Age", "Squared Age"),
+          digits = 2)
+
+
+```
+
+For females, bachelor degree holders increased their hourly wage by an average of \$7.79/hour, controlling for age and age\^2. For males, the increase was an average of \$8.26.
+
+  *Part C*
+
+The return of a college degree differs from 0 at the 5% level for both men and women.
+
+  *Part D*
+
+One could add an interaction term, as in female\*bachelor, to the original regression (based on the full data set) and see whether it is significant. If it is, that would be evidence to believe that the return to college is significantly different between males and females.
+
+  *Part E*
+
+One potential confounding factor is the different ability of those who go to college vs. those who do not. It is relatively safe to assume that people who are admitted to and successful in college have a baseline ability to successfully complete tasks and meet deadlines that not everyone who does not have a degree will meet. These qualities can make one more successful in the workplace, leading to a higher salary. This factor is related to the outcome variable and is not specified in the regression, so it is confounding. Also, people who graduate a bachelors are more likely to be from a well-resourced, well-connected background that can lead to a more successful professional life in a way that is not specified in the regression. It would be important to add something like family income to isolate the effect more strongly.
