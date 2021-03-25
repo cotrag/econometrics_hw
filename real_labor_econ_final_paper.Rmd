@@ -20,6 +20,44 @@ knitr::opts_chunk$set(fig.width=12, fig.height=8)
 pulse_24 <- read_csv("pulse2021_puf_24.csv")
 ```
 
+```{r}
+
+
+pulse_23_weight <- read_csv("https://www.dropbox.com/s/ptzdritvz1gudgo/pulse2021_repwgt_puf_23.csv?dl=1")
+
+
+pulse_22_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_22.csv?dl=1")
+
+pulse_21_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_21.csv?dl=1")
+
+pulse_20_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_20.csv?dl=1")
+
+pulse_19_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_19.csv?dl=1")
+
+pulse_18_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_18.csv?dl=1")
+```
+
+```{r}
+
+pulse_23 <- read_csv("https://www.dropbox.com/s/pini5g22oi6nrv0/pulse2021_puf_23.csv?dl=1")
+
+pulse_22 <- read_csv("https://www.dropbox.com/s/8b1yyfzbpjwpakc/pulse2021_puf_22.csv?dl=1")
+
+pulse_21 <- read_csv("https://www.dropbox.com/s/jqudrgvqnuzj37j/pulse2020_puf_21.csv?dl=1")
+
+pulse_20 <- read_csv("https://www.dropbox.com/s/jjzxltc020ihy9i/pulse2020_puf_20.csv?dl=1")
+
+pulse_19 <- read_csv("https://www.dropbox.com/s/j5mnfudk4vgnwx4/pulse2020_puf_19.csv?dl=1")
+
+pulse_18 <- read_csv("https://www.dropbox.com/s/4m8tcz8s7catgpr/pulse2020_puf_18.csv?dl=1")
+
+
+head(pulse_22)
+
+
+
+```
+
 # Week 24
 
 ```{r}
@@ -135,12 +173,849 @@ final_young_employment <- left_join(young_employment_binded_df,
 final_young_employment <- final_young_employment %>% 
   mutate(pct_not_working = round(V1 *100, 2))
 
-final_young_employment
+final_young_employment_24 <- final_young_employment
 
 ```
 
-# Now need to do this w/ all other weeks
+# Week 23
 
-Need to put data on dropbox because the datasets are so large-- use school's computers tomorrow.
+```{r}
 
-# After that, need to gather other state data
+young_23 <- pulse_23 %>%
+  filter(TBIRTH_YEAR %in% (1996:2000))
+
+
+# find % of people who did not do any work in past week
+
+
+pct_young_work_23 <-  young_23 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+
+pct_young_work_23$weight[3] / 
+    (pct_young_work_23$weight[1] + pct_young_work_23$weight[2] +  
+     pct_young_work_23$weight[3])
+
+
+# 38.8% of young people did not work in the past week
+# filter out non substantive variables
+
+
+young_23 <- young_23 %>% 
+  filter(ANYWORK != -99)
+
+
+pct_young_work_ms_23 <- young_23 %>% 
+  filter(EST_ST == 28)
+
+
+
+
+pct_young_work_ms_23 <-  pct_young_work_ms_23 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+pct_young_work_ms_23
+
+
+```
+
+```{r}
+
+young_23 <- pulse_23 %>%
+  filter(TBIRTH_YEAR %in% (1996:2000))
+
+
+# find % of people who did not do any work in past week
+
+
+pct_young_work_23 <-  young_23 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+
+pct_young_work_23$weight[3] / 
+    (pct_young_work_23$weight[1] + pct_young_work_23$weight[2] +  
+     pct_young_work_23$weight[3])
+
+
+# 38.8% of young people did not work in the past week
+# filter out non substantive variables
+
+
+young_23 <- young_23 %>% 
+  filter(ANYWORK != -99)
+
+
+pct_young_work_ms_23 <- young_23 %>% 
+  filter(EST_ST == 30)
+
+
+
+
+pct_young_work_ms_23 <-  pct_young_work_ms_23 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+pct_young_work_ms_23
+
+
+```
+
+```{r}
+
+
+pct_young_not_working_function_23 <- function(state_function_yp){
+  st_filter <- young_23 %>% 
+    filter(EST_ST == state_function_yp)
+  
+  not_working <- st_filter %>% 
+    group_by(ANYWORK) %>% 
+    summarise(weight_work = sum(PWEIGHT))
+  
+  pct_calc_young <- not_working$weight_work[2]/
+  (not_working$weight_work[1] + not_working$weight_work[2])
+
+#  pcdf <- data.frame(state_function, pct_calc)
+  return(pct_calc_young)
+}
+
+# pct_young_not_working_function(38)
+
+```
+
+```{r}
+
+statevector_youngemp_23 <- sort(unique(pulse_23$EST_ST))
+
+statevector_youngemp_df_23 <- as.data.frame(statevector_youngemp_23)
+
+statevector_youngemp_df_23 <- statevector_youngemp_df_23 %>% 
+  mutate(row_id = row_number())
+
+
+
+young_employment_mapped_23 <- map(statevector_youngemp_23, 
+                                pct_young_not_working_function_23)
+
+
+
+
+
+young_employment_binded_23 <- do.call("rbind", young_employment_mapped_23)
+
+
+
+
+young_employment_binded_df_23 <- as.data.frame(young_employment_binded_23)
+
+
+
+young_employment_binded_df_23 <- young_employment_binded_df_23 %>% 
+  mutate(row_id = row_number())
+
+
+
+
+final_young_employment_23 <- left_join(young_employment_binded_df_23, 
+                                    statevector_youngemp_df_23,
+                                    by = c("row_id" = "row_id"))
+
+
+final_young_employment_23 <- final_young_employment_23 %>% 
+  mutate(pct_not_working = round(V1 *100, 2))
+
+final_young_employment_23
+
+```
+
+# Week 22
+
+```{r}
+
+young_22 <- pulse_22 %>%
+  filter(TBIRTH_YEAR %in% (1996:2000))
+
+
+# find % of people who did not do any work in past week
+
+
+pct_young_work_22 <-  young_22 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+
+pct_young_work_22$weight[3] / 
+    (pct_young_work_22$weight[1] + pct_young_work_22$weight[2] +  
+     pct_young_work_22$weight[3])
+
+
+# 38.8% of young people did not work in the past week
+# filter out non substantive variables
+
+
+young_22 <- young_22 %>% 
+  filter(ANYWORK != -99)
+
+
+pct_young_work_ms_22 <- young_22 %>% 
+  filter(EST_ST == 30)
+
+
+
+
+pct_young_work_ms_22 <-  pct_young_work_ms_22 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+pct_young_work_ms_22
+
+
+```
+
+```{r}
+
+
+
+pct_young_not_working_function_22 <- function(state_function_yp){
+  st_filter <- young_22 %>% 
+    filter(EST_ST == state_function_yp)
+  
+  not_working <- st_filter %>% 
+    group_by(ANYWORK) %>% 
+    summarise(weight_work = sum(PWEIGHT))
+  
+  pct_calc_young <- not_working$weight_work[2]/
+  (not_working$weight_work[1] + not_working$weight_work[2])
+
+#  pcdf <- data.frame(state_function, pct_calc)
+  return(pct_calc_young)
+}
+
+# pct_young_not_working_function(38)
+
+```
+
+```{r}
+
+statevector_youngemp_22 <- sort(unique(pulse_22$EST_ST))
+
+statevector_youngemp_df_22 <- as.data.frame(statevector_youngemp_22)
+
+statevector_youngemp_df_22 <- statevector_youngemp_df_22 %>% 
+  mutate(row_id = row_number())
+
+
+
+young_employment_mapped_22 <- map(statevector_youngemp_22, 
+                                pct_young_not_working_function_22)
+
+
+
+
+
+young_employment_binded_22 <- do.call("rbind", young_employment_mapped_22)
+
+
+
+
+young_employment_binded_df_22 <- as.data.frame(young_employment_binded_22)
+
+
+
+young_employment_binded_df_22 <- young_employment_binded_df_22 %>% 
+  mutate(row_id = row_number())
+
+
+
+
+final_young_employment_22 <- left_join(young_employment_binded_df_22, 
+                                    statevector_youngemp_df_22,
+                                    by = c("row_id" = "row_id"))
+
+
+final_young_employment_22 <- final_young_employment_22 %>% 
+  mutate(pct_not_working = round(V1 *100, 2))
+
+final_young_employment_22
+
+
+```
+
+# Week 21
+
+```{r}
+
+
+young_21 <- pulse_21 %>%
+  filter(TBIRTH_YEAR %in% (1996:2000))
+
+
+# find % of people who did not do any work in past week
+
+
+pct_young_work_21 <-  young_21 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+
+pct_young_work_21$weight[3] / 
+    (pct_young_work_21$weight[1] + pct_young_work_21$weight[2] +  
+     pct_young_work_21$weight[3])
+
+
+# 38.8% of young people did not work in the past week
+# filter out non substantive variables
+
+
+young_21 <- young_21 %>% 
+  filter(ANYWORK != -99)
+
+
+pct_young_work_ms_21 <- young_21 %>% 
+  filter(EST_ST == 30)
+
+
+
+
+pct_young_work_ms_21 <-  pct_young_work_ms_21 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+pct_young_work_ms_21
+
+```
+
+```{r}
+
+
+pct_young_not_working_function_21 <- function(state_function_yp){
+  st_filter <- young_21 %>% 
+    filter(EST_ST == state_function_yp)
+  
+  not_working <- st_filter %>% 
+    group_by(ANYWORK) %>% 
+    summarise(weight_work = sum(PWEIGHT))
+  
+  pct_calc_young <- not_working$weight_work[2]/
+  (not_working$weight_work[1] + not_working$weight_work[2])
+
+#  pcdf <- data.frame(state_function, pct_calc)
+  return(pct_calc_young)
+}
+
+# pct_young_not_working_function(38)
+
+```
+
+```{r}
+
+
+statevector_youngemp_21 <- sort(unique(pulse_21$EST_ST))
+
+statevector_youngemp_df_21 <- as.data.frame(statevector_youngemp_21)
+
+statevector_youngemp_df_21 <- statevector_youngemp_df_21 %>% 
+  mutate(row_id = row_number())
+
+
+
+young_employment_mapped_21 <- map(statevector_youngemp_21, 
+                                pct_young_not_working_function_21)
+
+
+
+
+
+young_employment_binded_21 <- do.call("rbind", young_employment_mapped_21)
+
+
+
+
+young_employment_binded_df_21 <- as.data.frame(young_employment_binded_21)
+
+
+
+young_employment_binded_df_21 <- young_employment_binded_df_21 %>% 
+  mutate(row_id = row_number())
+
+
+
+
+final_young_employment_21 <- left_join(young_employment_binded_df_21, 
+                                    statevector_youngemp_df_21,
+                                    by = c("row_id" = "row_id"))
+
+
+final_young_employment_21 <- final_young_employment_21 %>% 
+  mutate(pct_not_working = round(V1 *100, 2))
+
+final_young_employment_21
+
+
+
+```
+
+# Week 20
+
+```{r}
+
+
+young_20 <- pulse_20 %>%
+  filter(TBIRTH_YEAR %in% (1996:2000))
+
+
+# find % of people who did not do any work in past week
+
+
+pct_young_work_20 <-  young_20 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+
+pct_young_work_20$weight[3] / 
+    (pct_young_work_20$weight[1] + pct_young_work_20$weight[2] +  
+     pct_young_work_20$weight[3])
+
+
+# 38.8% of young people did not work in the past week
+# filter out non substantive variables
+
+
+young_20 <- young_20 %>% 
+  filter(ANYWORK != -99)
+
+
+pct_young_work_ms_20 <- young_20 %>% 
+  filter(EST_ST == 30)
+
+
+
+
+pct_young_work_ms_20 <-  pct_young_work_ms_20 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+pct_young_work_ms_20
+
+```
+
+```{r}
+
+
+pct_young_not_working_function_20 <- function(state_function_yp){
+  st_filter <- young_20 %>% 
+    filter(EST_ST == state_function_yp)
+  
+  not_working <- st_filter %>% 
+    group_by(ANYWORK) %>% 
+    summarise(weight_work = sum(PWEIGHT))
+  
+  pct_calc_young <- not_working$weight_work[2]/
+  (not_working$weight_work[1] + not_working$weight_work[2])
+
+#  pcdf <- data.frame(state_function, pct_calc)
+  return(pct_calc_young)
+}
+
+# pct_young_not_working_function(38)
+
+
+```
+
+```{r}
+
+
+statevector_youngemp_20 <- sort(unique(pulse_20$EST_ST))
+
+statevector_youngemp_df_20 <- as.data.frame(statevector_youngemp_20)
+
+statevector_youngemp_df_20 <- statevector_youngemp_df_20 %>% 
+  mutate(row_id = row_number())
+
+
+
+young_employment_mapped_20 <- map(statevector_youngemp_20, 
+                                pct_young_not_working_function_20)
+
+
+
+
+
+young_employment_binded_20 <- do.call("rbind", young_employment_mapped_20)
+
+
+
+
+young_employment_binded_df_20 <- as.data.frame(young_employment_binded_20)
+
+
+
+young_employment_binded_df_20 <- young_employment_binded_df_20 %>% 
+  mutate(row_id = row_number())
+
+
+
+
+final_young_employment_20 <- left_join(young_employment_binded_df_20, 
+                                    statevector_youngemp_df_20,
+                                    by = c("row_id" = "row_id"))
+
+
+final_young_employment_20 <- final_young_employment_20 %>% 
+  mutate(pct_not_working = round(V1 *100, 2))
+
+final_young_employment_20
+
+
+
+
+```
+
+# Week 19
+
+```{r}
+
+young_19 <- pulse_19 %>%
+  filter(TBIRTH_YEAR %in% (1996:2000))
+
+
+# find % of people who did not do any work in past week
+
+
+pct_young_work_19 <-  young_19 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+
+pct_young_work_19$weight[3] / 
+    (pct_young_work_19$weight[1] + pct_young_work_19$weight[2] +  
+     pct_young_work_19$weight[3])
+
+
+# 38.8% of young people did not work in the past week
+# filter out non substantive variables
+
+
+young_19 <- young_19 %>% 
+  filter(ANYWORK != -99)
+
+
+pct_young_work_ms_19 <- young_19 %>% 
+  filter(EST_ST == 30)
+
+
+
+
+pct_young_work_ms_19 <-  pct_young_work_ms_19 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+pct_young_work_ms_19
+
+
+```
+
+```{r}
+
+
+pct_young_not_working_function_19 <- function(state_function_yp){
+  st_filter <- young_19 %>% 
+    filter(EST_ST == state_function_yp)
+  
+  not_working <- st_filter %>% 
+    group_by(ANYWORK) %>% 
+    summarise(weight_work = sum(PWEIGHT))
+  
+  pct_calc_young <- not_working$weight_work[2]/
+  (not_working$weight_work[1] + not_working$weight_work[2])
+
+#  pcdf <- data.frame(state_function, pct_calc)
+  return(pct_calc_young)
+}
+
+# pct_young_not_working_function(38)
+
+
+```
+
+```{r}
+
+
+statevector_youngemp_19 <- sort(unique(pulse_19$EST_ST))
+
+statevector_youngemp_df_19 <- as.data.frame(statevector_youngemp_19)
+
+statevector_youngemp_df_19 <- statevector_youngemp_df_19 %>% 
+  mutate(row_id = row_number())
+
+
+
+young_employment_mapped_19 <- map(statevector_youngemp_19, 
+                                pct_young_not_working_function_19)
+
+
+
+
+
+young_employment_binded_19 <- do.call("rbind", young_employment_mapped_19)
+
+
+
+
+young_employment_binded_df_19 <- as.data.frame(young_employment_binded_19)
+
+
+
+young_employment_binded_df_19 <- young_employment_binded_df_19 %>% 
+  mutate(row_id = row_number())
+
+
+
+
+final_young_employment_19 <- left_join(young_employment_binded_df_19, 
+                                    statevector_youngemp_df_19,
+                                    by = c("row_id" = "row_id"))
+
+
+final_young_employment_19 <- final_young_employment_19 %>% 
+  mutate(pct_not_working = round(V1 *100, 2))
+
+final_young_employment_19
+
+
+
+
+
+```
+
+# Week 18
+
+```{r}
+
+young_18 <- pulse_18 %>%
+  filter(TBIRTH_YEAR %in% (1996:2000))
+
+
+# find % of people who did not do any work in past week
+
+
+pct_young_work_18 <-  young_18 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+
+pct_young_work_18$weight[3] / 
+    (pct_young_work_18$weight[1] + pct_young_work_18$weight[2] +  
+     pct_young_work_18$weight[3])
+
+
+# 38.8% of young people did not work in the past week
+# filter out non substantive variables
+
+
+young_18 <- young_18 %>% 
+  filter(ANYWORK != -99)
+
+
+pct_young_work_ms_18 <- young_18 %>% 
+  filter(EST_ST == 30)
+
+
+
+
+pct_young_work_ms_18 <-  pct_young_work_ms_18 %>% 
+  group_by(ANYWORK) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+pct_young_work_ms_18
+
+
+
+```
+
+```{r}
+
+pct_young_not_working_function_18 <- function(state_function_yp){
+  st_filter <- young_18 %>% 
+    filter(EST_ST == state_function_yp)
+  
+  not_working <- st_filter %>% 
+    group_by(ANYWORK) %>% 
+    summarise(weight_work = sum(PWEIGHT))
+  
+  pct_calc_young <- not_working$weight_work[2]/
+  (not_working$weight_work[1] + not_working$weight_work[2])
+
+#  pcdf <- data.frame(state_function, pct_calc)
+  return(pct_calc_young)
+}
+
+# pct_young_not_working_function(38)
+
+
+
+```
+
+```{r}
+
+statevector_youngemp_18 <- sort(unique(pulse_18$EST_ST))
+
+statevector_youngemp_df_18 <- as.data.frame(statevector_youngemp_18)
+
+statevector_youngemp_df_18 <- statevector_youngemp_df_18 %>% 
+  mutate(row_id = row_number())
+
+
+
+young_employment_mapped_18 <- map(statevector_youngemp_18, 
+                                pct_young_not_working_function_18)
+
+
+
+
+
+young_employment_binded_18 <- do.call("rbind", young_employment_mapped_18)
+
+
+
+
+young_employment_binded_df_18 <- as.data.frame(young_employment_binded_18)
+
+
+
+young_employment_binded_df_18 <- young_employment_binded_df_18 %>% 
+  mutate(row_id = row_number())
+
+
+
+
+final_young_employment_18 <- left_join(young_employment_binded_df_18, 
+                                    statevector_youngemp_df_18,
+                                    by = c("row_id" = "row_id"))
+
+
+final_young_employment_18 <- final_young_employment_18 %>% 
+  mutate(pct_not_working = round(V1 *100, 2))
+
+final_young_employment_18
+
+
+
+
+
+
+```
+
+# Now combine all final data frames
+
+```{r}
+
+# need to rename columns to make it work
+# 
+# final_young_employment_18$statevector_youngemp_18
+# final_young_employment_18$pct_not_working
+
+# final_young_employment_18 <- final_young_employment_18 %>% 
+#   rename(state_fips = statevector_youngemp_18,
+#          pct_not_working_18 = pct_not_working )
+
+
+final_young_employment_19 <- final_young_employment_19 %>% 
+  rename(state_fips = statevector_youngemp_19,
+         pct_not_working_19 = pct_not_working )
+
+
+final_young_employment_20 <- final_young_employment_20 %>% 
+  rename(state_fips = statevector_youngemp_20,
+         pct_not_working_20 = pct_not_working )
+
+
+final_young_employment_21 <- final_young_employment_21 %>% 
+  rename(state_fips = statevector_youngemp_21,
+         pct_not_working_21 = pct_not_working )
+
+
+final_young_employment_22 <- final_young_employment_22 %>% 
+  rename(state_fips = statevector_youngemp_22,
+         pct_not_working_22 = pct_not_working )
+
+
+final_young_employment_23 <- final_young_employment_23 %>% 
+  rename(state_fips = statevector_youngemp_23,
+         pct_not_working_23 = pct_not_working )
+
+
+final_young_employment_24 <- final_young_employment_24 %>% 
+  rename(state_fips = statevector_youngemp,
+         pct_not_working_24 = pct_not_working)
+
+
+
+
+```
+
+```{r}
+
+
+merged_final_young_emp_dataset <- final_young_employment_18 %>%
+    left_join(final_young_employment_19, by='state_fips') %>%
+    left_join(final_young_employment_20, by='state_fips') %>% 
+    left_join(final_young_employment_21, by='state_fips') %>% 
+    left_join(final_young_employment_22, by='state_fips') %>% 
+    left_join(final_young_employment_23, by='state_fips') %>% 
+    left_join(final_young_employment_24, by='state_fips')
+
+head(merged_final_young_emp_dataset)
+
+# select(-starts_with('po'))
+
+merged_final_young_emp_dataset <- merged_final_young_emp_dataset %>% 
+  select(-starts_with('V1'))
+
+head(merged_final_young_emp_dataset)
+
+```
+
+Need to pivot this table
+
+```{r}
+
+piv_young_emp_dataset <- merged_final_young_emp_dataset %>% 
+  pivot_longer(c(pct_not_working_18, pct_not_working_19, 
+                 pct_not_working_20, pct_not_working_21, 
+                 pct_not_working_22, pct_not_working_23,
+                 pct_not_working_24), names_to = "Wave",
+               values_to = "pct_young_nw")
+
+head(piv_young_emp_dataset)
+
+piv_young_emp_dataset$wave_num <- piv_young_emp_dataset$Wave %>% 
+  str_remove("pct_not_working_")
+
+head(piv_young_emp_dataset)
+```
+
+# Plot
+
+```{r}
+
+piv_young_emp_grouped <- piv_young_emp_dataset %>% 
+  group_by(state_fips)
+
+piv_young_emp_grouped$wave_num <- 
+  as.numeric(piv_young_emp_grouped$wave_num)
+
+
+ggplot(piv_young_emp_grouped, aes(x = wave_num, y = pct_young_nw, 
+                                  color = state_fips)) +
+  geom_line() + 
+  theme_minimal() +
+  labs(x = "Wave", y = "% Young Not Working") +
+  facet_wrap(~state_fips)
+
+
+```
+
+# Now, get other state level data
