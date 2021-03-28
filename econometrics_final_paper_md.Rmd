@@ -1,0 +1,265 @@
+---
+title: "econometrics_final_paper"
+output: 
+    html_document:
+      theme: flatly
+      toc: true
+      toc_float: true
+      code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(foreign)
+library(haven)
+library(fuzzyjoin)
+library(stringdist)
+library(knitr)
+library(kableExtra)
+
+county_mobility_data <- read_dta("online_table2-2.dta")
+
+county_housing_prices <- read_csv("county_housing data.csv")
+
+edu_county <- read_csv("county_edu.csv")
+
+pov_unemp_county <- read_csv("county_unemp_data.csv")
+
+
+```
+
+## Transformations and Merging of Datasets
+
+```{r}
+
+county_housing_prices_long <- county_housing_prices %>% 
+  pivot_longer(!c(RegionID, SizeRank, RegionName, RegionType, StateName, State,
+                 Metro, StateCodeFIPS, MunicipalCodeFIPS), 
+               names_to = "date", values_to = "price")
+
+
+county_housing_prices_long$date <- mdy(county_housing_prices_long$date)
+
+
+county_housing_prices_long <- county_housing_prices_long %>% 
+  filter(date > "2010-01-01" & date < "2020-01-01")
+
+
+
+county_housing_prices_long$RegionName <-
+  str_remove(county_housing_prices_long$RegionName, "County")
+
+county_housing_prices_long$RegionName <- str_replace(county_housing_prices_long$RegionName, " ", "")
+
+
+
+```
+
+## Develop function that merges datasets by county name
+
+```{r}
+
+dataset_merge_function <- function(state_for_function) {
+  
+  filtered_price_function <-  county_housing_prices_long %>% 
+    filter(State == state_for_function)
+  
+  filtered_mobility_function <- county_mobility_data %>% 
+    filter(stateabbrv == state_for_function)
+  
+  joined_function_ds <- stringdist_join(filtered_price_function, filtered_mobility_function, by = c("RegionName" = "county_name"))
+  
+  return(joined_function_ds)
+  
+}
+```
+
+## Iterate through empty state vector
+
+```{r}
+
+state_vector_paper_final <- unique(county_housing_prices_long$State)
+
+state_vector_paper_final
+
+mapped_dataset <- map(state_vector_paper_final, dataset_merge_function)
+
+binded_dataset <- do.call("rbind", mapped_dataset)
+```
+
+## Summary stats (Will need to update), wait on this
+
+```{r}
+
+binded_dataset %>% 
+ # group_by(RegionID) %>% 
+  summarize("Mean Price" = mean(price, na.rm = TRUE),
+            "Mean Estimated Change in Child Income at age 26 by Spending 1 year in 
+            Given County, p25" = 
+              round(mean(pct_causal_p25_kir26, na.rm = TRUE), 3),
+            "Mean Estimated Change in Child Income at age 26 by Spending 1 year in 
+            Given County, p75" = 
+              round(mean(pct_causal_p75_kir26, na.rm = TRUE), 3)) %>% 
+  knitr::kable() %>% 
+  kable_styling("striped", "hover", full_width=F)
+
+```
+
+## Pull sample to plot price over time
+
+```{r}
+
+
+set.seed(3743)
+
+sample_selection <- sample_n(binded_dataset, 5)
+
+
+
+
+sample_data <- binded_dataset %>% 
+  filter(RegionID == c(1477, 1512, 147, 524, 977))
+
+
+ggplot(sample_data, aes(x = date, y = price, color = RegionName)) +
+  geom_line() +
+  labs(title = "ZHVI Over Time",
+       x = "Date",
+       y = "Price",
+       caption = "Source: Zillow Research Data") +
+  theme_classic() +
+  scale_y_continuous() +
+  scale_color_discrete(name = "County")
+
+```
+
+## Merge employment rates and education data
+
+need to merge clean data sets and merge by name in a similar way to the first merge.
+
+```{r}
+
+pov_unemp_county <- pov_unemp_county %>% 
+  select(c(fips_txt, Stabr, area_name, Unemployment_rate_2010, Unemployment_rate_2011,
+           Unemployment_rate_2012, Unemployment_rate_2013, Unemployment_rate_2014, 
+           Unemployment_rate_2015, Unemployment_rate_2016, Unemployment_rate_2017,
+           Unemployment_rate_2018, Unemployment_rate_2019))
+
+
+
+pov_county_long <- pov_unemp_county %>% 
+  pivot_longer(!c(fips_txt, Stabr, area_name), names_to = "measure", values_to = "value")
+
+
+pov_county_long <- pov_county_long %>% 
+  filter(Stabr != 'US') %>% 
+  filter(Stabr != 'PR') %>% 
+  filter(Stabr != 'AK') %>% 
+  filter(Stabr != 'LA')
+
+pov_county_long <- pov_county_long %>% 
+  filter(substring(fips_txt, 5, 5) != 0)
+
+
+pov_county_long$area_name <- pov_county_long$area_name %>% 
+  str_remove("County")
+
+
+
+pov_county_long <- pov_county_long %>% 
+  separate(area_name, c("county", "state"), ",")
+
+
+
+full_ds_mobility_and_hp <- binded_dataset %>% 
+  select(c(RegionID, RegionName, stateabbrv, county_name, price, pct_causal_p25_kir26,
+           pct_causal_p75_kir26, date))
+
+
+
+dataset_merge_function_pov <- function(state_for_function) {
+  
+  filtered_pov_function <-  pov_county_long %>% 
+    filter(Stabr == state_for_function)
+  
+  filtered_full_ds_function <- full_ds_mobility_and_hp %>% 
+    filter(stateabbrv == state_for_function)
+  
+  joined_function_ds_pov <- stringdist_join(
+                                        filtered_full_ds_function,
+                                        filtered_pov_function,
+                                        by = c("county_name" = "county"))
+  
+  return(joined_function_ds_pov)
+  
+}
+
+
+emp_state_vector <- unique(pov_county_long$Stabr)
+
+
+mapped_dataset_pov <- map(emp_state_vector, dataset_merge_function_pov)
+
+
+binded_dataset_add_pov <- do.call("rbind", mapped_dataset_pov)
+
+
+```
+
+## Now merge in education, don't need to do the function , able to match on FIPS
+
+```{r}
+
+
+edu_county <- edu_county %>% 
+  filter(substring(`FIPS Code`, 5, 5) != 0)
+
+
+edu_county <- edu_county %>% 
+  select(c(`FIPS Code`, State, `Area name`, 
+           `Percent of adults with less than a high school diploma, 2015-19`,
+           `Percent of adults with a high school diploma only, 2015-19`,
+           `Percent of adults completing some college or associate's degree, 2015-19`,
+           `Percent of adults with a bachelor's degree or higher, 2015-19`,
+           `2013 Rural-urban Continuum Code`))
+
+
+edu_county <- edu_county %>% 
+  rename(no_diploma = `Percent of adults with less than a high school diploma, 2015-19`,
+         hs_only = `Percent of adults with a high school diploma only, 2015-19`,
+         some_college = `Percent of adults completing some college or associate's degree, 2015-19`,
+         ba = `Percent of adults with a bachelor's degree or higher, 2015-19`,
+         rural_continuum = `2013 Rural-urban Continuum Code`)
+
+
+
+
+
+edu_county_long <- edu_county %>% 
+  pivot_longer(!c(`FIPS Code`, State, `Area name`, rural_continuum), 
+               names_to = "measure", values_to = "percentage")
+
+
+
+
+edu_county_long$`Area name` <- edu_county_long$`Area name` %>% 
+  str_remove("County")
+
+
+
+dataset_add_edu <- left_join(binded_dataset_add_pov, edu_county_long,
+                             by = c("fips_txt" = "FIPS Code"))
+
+
+
+#trim it
+
+final_dataset <- dataset_add_edu %>% 
+  select(c(RegionID, RegionName, stateabbrv, county_name, price,
+           pct_causal_p25_kir26, pct_causal_p75_kir26, date, fips_txt,
+           measure.x, value, rural_continuum, measure.y, percentage))
+
+head(final_dataset)
+```
