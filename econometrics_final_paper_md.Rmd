@@ -18,6 +18,8 @@ library(fuzzyjoin)
 library(stringdist)
 library(knitr)
 library(kableExtra)
+library(stargazer)
+
 
 county_mobility_data <- read_dta("online_table2-2.dta")
 
@@ -30,7 +32,7 @@ pov_unemp_county <- read_csv("county_unemp_data.csv")
 
 ```
 
-## Transformations and Merging of Datasets
+## Transform and merge data sets
 
 ```{r}
 
@@ -54,16 +56,34 @@ county_housing_prices_long$RegionName <-
 county_housing_prices_long$RegionName <- str_replace(county_housing_prices_long$RegionName, " ", "")
 
 
+head(county_housing_prices_long)
+```
+
+## Take average price over time-- there is no reason to think the relationship to other measures is affected by time (other set is good for descriptive time trends)
+
+```{r}
+
+
+mean_county_housing_prices_long <- county_housing_prices_long %>%
+  group_by(RegionID) %>% 
+  summarise(mean_house_price = mean(price, na.rm = TRUE))
+
+head(mean_county_housing_prices_long)
+
+mean_county_housing_prices_long <- left_join(mean_county_housing_prices_long, county_housing_prices_long, by = c("RegionID" = "RegionID"))
+
+mean_county_housing_prices_long <- mean_county_housing_prices_long %>% 
+  distinct(RegionID, .keep_all = TRUE)
 
 ```
 
-## Develop function that merges datasets by county name
+## Develop function that merges data sets by county name
 
 ```{r}
 
 dataset_merge_function <- function(state_for_function) {
   
-  filtered_price_function <-  county_housing_prices_long %>% 
+  filtered_price_function <-  mean_county_housing_prices_long %>% 
     filter(State == state_for_function)
   
   filtered_mobility_function <- county_mobility_data %>% 
@@ -80,7 +100,7 @@ dataset_merge_function <- function(state_for_function) {
 
 ```{r}
 
-state_vector_paper_final <- unique(county_housing_prices_long$State)
+state_vector_paper_final <- unique(mean_county_housing_prices_long$State)
 
 state_vector_paper_final
 
@@ -95,7 +115,7 @@ binded_dataset <- do.call("rbind", mapped_dataset)
 
 binded_dataset %>% 
  # group_by(RegionID) %>% 
-  summarize("Mean Price" = mean(price, na.rm = TRUE),
+  summarize("Mean Price" = mean(mean_house_price, na.rm = TRUE),
             "Mean Estimated Change in Child Income at age 26 by Spending 1 year in 
             Given County, p25" = 
               round(mean(pct_causal_p25_kir26, na.rm = TRUE), 3),
@@ -114,12 +134,12 @@ binded_dataset %>%
 
 set.seed(3743)
 
-sample_selection <- sample_n(binded_dataset, 5)
+sample_selection <- sample_n(county_housing_prices_long, 5)
 
 
 
 
-sample_data <- binded_dataset %>% 
+sample_data <- county_housing_prices_long %>% 
   filter(RegionID == c(1477, 1512, 147, 524, 977))
 
 
@@ -137,7 +157,7 @@ ggplot(sample_data, aes(x = date, y = price, color = RegionName)) +
 
 ## Merge employment rates and education data
 
-need to merge clean data sets and merge by name in a similar way to the first merge.
+Need to merge clean data sets and merge by name in a similar way to the first merge. Also want to take the average (between 2010 and 2019
 
 ```{r}
 
@@ -153,22 +173,36 @@ pov_county_long <- pov_unemp_county %>%
   pivot_longer(!c(fips_txt, Stabr, area_name), names_to = "measure", values_to = "value")
 
 
-pov_county_long <- pov_county_long %>% 
-  filter(Stabr != 'US') %>% 
-  filter(Stabr != 'PR') %>% 
-  filter(Stabr != 'AK') %>% 
-  filter(Stabr != 'LA')
+mean_pov_county_long <- pov_county_long %>%
+  group_by(fips_txt) %>% 
+  summarise(mean_unemp_rate = mean(value, na.rm = TRUE))
 
-pov_county_long <- pov_county_long %>% 
+head(mean_pov_county_long)
+
+mean_pov_county_long <- left_join(mean_pov_county_long, pov_county_long, by = c("fips_txt" = "fips_txt"))
+
+mean_pov_county_long <- mean_pov_county_long %>% 
+  distinct(fips_txt, .keep_all = TRUE)
+
+
+
+
+
+
+mean_pov_county_long <- mean_pov_county_long %>% 
+  filter(Stabr != 'US')
+
+
+mean_pov_county_long <- mean_pov_county_long %>% 
   filter(substring(fips_txt, 5, 5) != 0)
 
 
-pov_county_long$area_name <- pov_county_long$area_name %>% 
+mean_pov_county_long$area_name <- mean_pov_county_long$area_name %>% 
   str_remove("County")
 
 
 
-pov_county_long <- pov_county_long %>% 
+mean_pov_county_long <- mean_pov_county_long %>% 
   separate(area_name, c("county", "state"), ",")
 
 
@@ -181,7 +215,7 @@ full_ds_mobility_and_hp <- binded_dataset %>%
 
 dataset_merge_function_pov <- function(state_for_function) {
   
-  filtered_pov_function <-  pov_county_long %>% 
+  filtered_pov_function <-  mean_pov_county_long %>% 
     filter(Stabr == state_for_function)
   
   filtered_full_ds_function <- full_ds_mobility_and_hp %>% 
@@ -197,7 +231,7 @@ dataset_merge_function_pov <- function(state_for_function) {
 }
 
 
-emp_state_vector <- unique(pov_county_long$Stabr)
+emp_state_vector <- unique(mean_pov_county_long$Stabr)
 
 
 mapped_dataset_pov <- map(emp_state_vector, dataset_merge_function_pov)
@@ -205,10 +239,10 @@ mapped_dataset_pov <- map(emp_state_vector, dataset_merge_function_pov)
 
 binded_dataset_add_pov <- do.call("rbind", mapped_dataset_pov)
 
-
+head(binded_dataset_add_pov)
 ```
 
-## Now merge in education, don't need to do the function , able to match on FIPS
+## Now merge in education, don't need to do the function, able to match on FIPS
 
 ```{r}
 
@@ -247,19 +281,38 @@ edu_county_long <- edu_county %>%
 edu_county_long$`Area name` <- edu_county_long$`Area name` %>% 
   str_remove("County")
 
-
+head(edu_county_long)
 
 dataset_add_edu <- left_join(binded_dataset_add_pov, edu_county_long,
                              by = c("fips_txt" = "FIPS Code"))
 
+head(dataset_add_edu)
 
+dataset_add_edu$mean_unemp_rate
 
 #trim it
 
 final_dataset <- dataset_add_edu %>% 
   select(c(RegionID, RegionName, stateabbrv, county_name, price,
            pct_causal_p25_kir26, pct_causal_p75_kir26, date, fips_txt,
-           measure.x, value, rural_continuum, measure.y, percentage))
+           mean_unemp_rate, rural_continuum, measure.y, percentage)) %>% 
+  filter(measure.y == "ba")
 
 head(final_dataset)
+
+
 ```
+
+## This data set shows the average home price between 2010 and 2020, measured monthly, mobility estimates from Chetty et. al., average unemployment rate between 2010 and 2019, and average % of residents with college degrees between 2015 and 2019. All of this data is at the county level.
+
+```{r}
+
+
+model_1 <- lm(price ~ pct_causal_p25_kir26 +  pct_causal_p75_kir26 + 
+                mean_unemp_rate + percentage, data = final_dataset)
+
+summary(model_1)
+
+```
+
+This analysis links housing prices from Zillow, county-level mobility estimates from Raj Chetty's "Preferred Estimates of Causal Place Effects by County" found at (<https://opportunityinsights.org/data/?geographic_level=102&topic=0&paper_id=0#resource->listing) . The variable pct_casual_p25_kir26 can be thought of as the "Mean estimated change in child's income at age 26 by spending 1 year in a given county" when that child's parents have an income in the 25th percentile. The pct_casual_p75_kir26 is the same measure when the child's parents have an income in the 75th percentile. I also include the mean unemployment rate between 2010 and 2019 and the average percentage of adults in the county with a bachelor's degree. The results show that, controlling for the other independent variables, increased mobility for children of parents at the 25th percentile of income increases home prices, while the opposite is true for children of parents at the 75th percentile of income. There is a surprising relationship between the average unemployment rate and home prices, wherein a 1% increase in the unemployment rate is associated with a \$6772.70 increase in home prices, controlling for the other variables. Unsurprisingly, a 1% increase in the number of adults with a bachelors degree is associated with a \$5646.80 increase in house prices, controlling for the given variables.
