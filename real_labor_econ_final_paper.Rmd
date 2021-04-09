@@ -14,30 +14,30 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(usmap)
 library(magrittr)
+library(stargazer)
 
-knitr::opts_chunk$set(fig.width=12, fig.height=8)
+```
+
+```{r}
+# 
+# 
+# pulse_23_weight <- read_csv("https://www.dropbox.com/s/ptzdritvz1gudgo/pulse2021_repwgt_puf_23.csv?dl=1")
+# 
+# 
+# pulse_22_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_22.csv?dl=1")
+# 
+# pulse_21_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_21.csv?dl=1")
+# 
+# pulse_20_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_20.csv?dl=1")
+# 
+# pulse_19_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_19.csv?dl=1")
+# 
+# pulse_18_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_18.csv?dl=1")
+```
+
+```{r}
 
 pulse_24 <- read_csv("pulse2021_puf_24.csv")
-```
-
-```{r}
-
-
-pulse_23_weight <- read_csv("https://www.dropbox.com/s/ptzdritvz1gudgo/pulse2021_repwgt_puf_23.csv?dl=1")
-
-
-pulse_22_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_22.csv?dl=1")
-
-pulse_21_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_21.csv?dl=1")
-
-pulse_20_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_20.csv?dl=1")
-
-pulse_19_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_19.csv?dl=1")
-
-pulse_18_weight <- read_csv("https://www.dropbox.com/s/ewengcdzm80rtz8/pulse2021_repwgt_puf_18.csv?dl=1")
-```
-
-```{r}
 
 pulse_23 <- read_csv("https://www.dropbox.com/s/pini5g22oi6nrv0/pulse2021_puf_23.csv?dl=1")
 
@@ -50,9 +50,6 @@ pulse_20 <- read_csv("https://www.dropbox.com/s/jjzxltc020ihy9i/pulse2020_puf_20
 pulse_19 <- read_csv("https://www.dropbox.com/s/j5mnfudk4vgnwx4/pulse2020_puf_19.csv?dl=1")
 
 pulse_18 <- read_csv("https://www.dropbox.com/s/4m8tcz8s7catgpr/pulse2020_puf_18.csv?dl=1")
-
-
-head(pulse_22)
 
 
 
@@ -912,14 +909,13 @@ final_young_employment_18
 
 ```{r}
 
-# need to rename columns to make it work
-# 
-# final_young_employment_18$statevector_youngemp_18
-# final_young_employment_18$pct_not_working
 
-# final_young_employment_18 <- final_young_employment_18 %>% 
-#   rename(state_fips = statevector_youngemp_18,
-#          pct_not_working_18 = pct_not_working )
+final_young_employment_18$statevector_youngemp_18
+final_young_employment_18$pct_not_working
+
+final_young_employment_18 <- final_young_employment_18 %>% 
+  rename(state_fips = statevector_youngemp_18,
+          pct_not_working_18 = pct_not_working )
 
 
 final_young_employment_19 <- final_young_employment_19 %>% 
@@ -969,7 +965,6 @@ merged_final_young_emp_dataset <- final_young_employment_18 %>%
 
 head(merged_final_young_emp_dataset)
 
-# select(-starts_with('po'))
 
 merged_final_young_emp_dataset <- merged_final_young_emp_dataset %>% 
   select(-starts_with('V1'))
@@ -993,6 +988,11 @@ head(piv_young_emp_dataset)
 
 piv_young_emp_dataset$wave_num <- piv_young_emp_dataset$Wave %>% 
   str_remove("pct_not_working_")
+
+head(piv_young_emp_dataset)
+
+piv_young_emp_dataset <- piv_young_emp_dataset %>% 
+  select(c(state_fips, row_id, Wave, pct_young_nw, wave_num))
 
 head(piv_young_emp_dataset)
 ```
@@ -1019,3 +1019,195 @@ ggplot(piv_young_emp_grouped, aes(x = wave_num, y = pct_young_nw,
 ```
 
 # Now, get other state level data
+
+start with employment rates leading up to covid
+
+```{r}
+
+state_unemp_data_hist <- read_csv("county_unemp_data.csv")
+
+
+state_unemp_data_hist <- state_unemp_data_hist %>% 
+  filter(substring(fips_txt, 5, 5) == 0) %>% 
+  filter(is.na(Rural_urban_continuum_code_2013)) %>% 
+  filter(is.na(Urban_influence_code_2013)) %>% 
+  filter(is.na(Metro_2013)) %>% 
+  filter(Stabr != 'US') 
+
+
+  
+state_unemp_data_hist <- state_unemp_data_hist %>% 
+  select(c(fips_txt, Stabr, Unemployment_rate_2010,
+           Unemployment_rate_2011, Unemployment_rate_2012, 
+           Unemployment_rate_2013, Unemployment_rate_2014,
+           Unemployment_rate_2015, Unemployment_rate_2016,
+           Unemployment_rate_2017, Unemployment_rate_2018,
+           Unemployment_rate_2019))
+
+head(state_unemp_data_hist)
+
+
+piv_state_unemp_data_hist <- state_unemp_data_hist %>% 
+  pivot_longer(!c(fips_txt, Stabr), names_to = "year", 
+               values_to = "unemp_rate")
+
+head(piv_state_unemp_data_hist)
+
+```
+
+Just take mean of state unemployment rate-- don't really want it time-variant
+
+```{r}
+
+#piv_state_unemp_data_hist$
+
+state_mean_unemp <- piv_state_unemp_data_hist %>% 
+  group_by(Stabr) %>% 
+  mutate(mean_unemp = mean(unemp_rate)) %>% 
+  select(c(fips_txt, Stabr, mean_unemp))
+
+state_mean_unemp <- unique(state_mean_unemp)
+
+state_mean_unemp$fips_txt
+
+
+state_mean_unemp$fips_txt <- str_sub(state_mean_unemp$fips_txt, end=-4)
+
+state_mean_unemp
+  
+
+```
+
+Join the data sets
+
+```{r}
+
+head(piv_young_emp_dataset)
+
+full_dataset <- left_join(piv_young_emp_dataset, state_mean_unemp,
+                          by = c("state_fips" = "fips_txt"))
+
+head(full_dataset)
+
+```
+
+```{r}
+
+edu_data <- read_csv("county_edu.csv")
+
+names(edu_data)
+
+edu_data$`FIPS Code`
+
+edu_data <- edu_data %>% 
+  select(`FIPS Code`, State, `Area name` ,
+         `2003 Rural-urban Continuum Code`, 
+         `2003 Urban Influence Code`, `2013 Rural-urban Continuum Code`,
+         `Percent of adults with a bachelor's degree or higher, 2015-19`)
+
+head(edu_data)
+
+edu_data <- edu_data %>% 
+  filter(substring(`FIPS Code`, 5, 5) == 0) %>% 
+  filter(substring(`FIPS Code`, 4, 4) == 0) %>%
+  filter(is.na(`2003 Rural-urban Continuum Code`)) %>% 
+  filter(is.na(`2003 Urban Influence Code`)) %>%
+  filter(State != 'US') %>% 
+  filter(!is.na(`Percent of adults with a bachelor's degree or higher, 2015-19`))
+
+head(edu_data)
+
+
+
+edu_data$`FIPS Code` <- str_sub(edu_data$`FIPS Code`, end=-4)
+
+edu_data
+
+
+head(full_dataset)
+
+full_dataset <- left_join(full_dataset, edu_data, 
+                          by = c("state_fips" = "FIPS Code"))
+
+names(full_dataset)
+
+full_dataset <- full_dataset %>% 
+  select(c(state_fips, Wave, pct_young_nw, wave_num, Stabr, 
+           `Percent of adults with a bachelor's degree or higher, 2015-19`,
+           mean_unemp))
+
+head(full_dataset)
+
+full_dataset <- full_dataset %>% 
+  rename(pct_with_ba = `Percent of adults with a bachelor's degree or higher, 2015-19`)
+
+head(full_dataset)
+
+```
+
+# First pass model
+
+```{r}
+
+
+dataset_for_modeling <- full_dataset %>% 
+  group_by(state_fips) %>% 
+  summarise(mean_pct_young_nw = mean(pct_young_nw))
+
+
+dataset_for_modeling <- left_join(dataset_for_modeling, full_dataset,
+                                  by = c("state_fips" = "state_fips"))
+
+head(dataset_for_modeling)
+
+dataset_for_modeling <- dataset_for_modeling %>% 
+  select(c(state_fips, mean_pct_young_nw, Stabr, pct_with_ba, mean_unemp))
+
+head(dataset_for_modeling)
+
+dataset_for_modeling <- distinct(dataset_for_modeling)
+
+
+head(dataset_for_modeling)
+
+beg_model <- lm(pct_young_nw ~ mean_unemp + pct_with_ba, data = full_dataset)
+
+summary(beg_model)
+
+stargazer(beg_model, type = "html", out = "labor_econ_model.html",
+          dep.var.labels = "Percent of Young People not Working",
+          covariate.labels = c("Mean Unemployment Rate", 
+                               "Percent of Adults Holding a BA"),
+          style = "aer")
+
+
+```
+
+# Make a map of state averages for time trends, Don't have to worry about cluttered facet map
+
+```{r}
+
+wave_avgs_young_emp <- piv_young_emp_dataset %>% 
+  group_by(Wave) %>% 
+  summarise(wave_avg = mean(pct_young_nw))
+
+
+
+wave_avgs_young_emp$wave_num <- wave_avgs_young_emp$Wave %>% 
+  str_remove("pct_not_working_")
+
+
+
+wave_avgs_young_emp$wave_num <- as.numeric(wave_avgs_young_emp$wave_num)
+
+
+ggplot(wave_avgs_young_emp, aes(x = wave_num, y = wave_avg)) +
+  labs(x = "Wave", y = "% of Young People Responding 'not employed'",
+       title = "Average Level of Young Unemployment of All States",
+       caption = "Source: US Census Household Pulse Survey") +
+  expand_limits(y=0) +
+  theme_bw() +
+  geom_line()
+
+
+```
